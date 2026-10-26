@@ -1,0 +1,52 @@
+
+{
+  "name": "apexiveai-workforce-payroll-saas",
+  "version": "1.0.0",
+  "description": "ApexiveAI Workforce Payroll Desktop Application",
+  "main": "electron/main.cjs",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "desktop:prepare": "node scripts/prepare-desktop.cjs",
+    "desktop:build": "npm run build --prefix frontend && npm run desktop:prepare && electron-builder --win nsis",
+    "desktop:dir": "npm run build --prefix frontend && npm run desktop:prepare && electron-builder --win dir",
+    "desktop:clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.apexiveai.workforcepayroll",
+    "productName": "ApexiveAI Workforce Payroll",
+    "asar": false,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "frontend/.next/standalone/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "ApexiveAI-Workforce-Payroll-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ApexiveAI Workforce Payroll",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

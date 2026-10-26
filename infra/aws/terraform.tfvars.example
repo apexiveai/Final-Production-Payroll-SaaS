@@ -1,0 +1,6 @@
+aws_region                       = "ap-southeast-1"
+name_prefix                      = "apexiveai-prod"
+employee_documents_bucket_name   = "replace-with-globally-unique-documents-bucket"
+database_backups_bucket_name     = "replace-with-globally-unique-backups-bucket"
+# Supply these values after approval from the organization's legal/compliance
+# owner. No production retention period is assumed by this template.

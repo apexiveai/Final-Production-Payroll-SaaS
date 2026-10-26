@@ -1,0 +1,139 @@
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
+    environment:
+      APP_ENV: production
+      HOST: 0.0.0.0
+      PORT: 8014
+      CORS_ORIGINS: ""
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8014/api/v1/health/ready', timeout=4).read()"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    expose:
+      - "8014"
+    networks:
+      - app
+
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
+    environment:
+      APP_ENV: production
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    profiles:
+      - maintenance
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - app
+
+  purge-expired-documents:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
+    environment:
+      APP_ENV: production
+    command: ["python", "-m", "app.cli.purge_expired_employee_documents"]
+    profiles:
+      - maintenance
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: /api/v1
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    expose:
+      - "3000"
+    networks:
+      - app
+
+  proxy:
+    image: caddy:2-alpine
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN to the public DNS hostname}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - app
+
+networks:
+  app:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
